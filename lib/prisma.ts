@@ -1,19 +1,22 @@
 import { PrismaClient } from '@prisma/client'
 
-
-let prisma: PrismaClient
-
-// check to use this workaround only in development and not in production
-if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient()
-} else {
-  // @ts-ignore
-  if (!global.prisma) {
-    // @ts-ignore
-    global.prisma = new PrismaClient()
-  }
-  // @ts-ignore
-  prisma = global.prisma
+const prismaClientPropertyName = `__prevent-name-collision__prisma`
+type GlobalThisWithPrismaClient = typeof globalThis & {
+  [prismaClientPropertyName]: PrismaClient
 }
+
+const getPrismaClient = () => {
+  if (process.env.NODE_ENV === `production`) {
+    return new PrismaClient()
+  } else {
+    const newGlobalThis = globalThis as GlobalThisWithPrismaClient
+    if (!newGlobalThis[prismaClientPropertyName]) {
+      newGlobalThis[prismaClientPropertyName] = new PrismaClient()
+    }
+    return newGlobalThis[prismaClientPropertyName]
+  }
+}
+
+const prisma = getPrismaClient()
 
 export default prisma
